@@ -5,5 +5,5 @@ Autogen Studio Code
 ## Usage
 
 ```
-autogenstudio ui --port 8080 --appdir ./myapp
+autogenstudio ui --port 8080 --appdir ./myapp1
 ```
