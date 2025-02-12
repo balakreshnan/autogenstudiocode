@@ -1,1 +1,2 @@
 autogenstudio
+PyPDF2
