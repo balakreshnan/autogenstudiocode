@@ -85,17 +85,6 @@ def save_files_to_json(directory: str) -> str:
     output_file = "file_list.json"
     file_list = []
 
-    # # Traverse the directory tree
-    # for dirpath, _, filenames in os.walk(directory):
-    #     for filename in filenames:
-    #         # Get the full file path
-    #         full_path = os.path.join(dirpath, filename)
-    #         file_list.append(full_path)
-
-    # # Save the list of files to a JSON file
-    # with open(output_file, 'w') as json_file:
-    #     json.dump(file_list, json_file, indent=4)
-
     success = "success"
     # Traverse the directory tree
     for dirpath, _, filenames in os.walk(directory):
@@ -189,19 +178,33 @@ if __name__ == "__main__":
         handoffs=["file_agent"],  # No handoffs for this agent
     )
 
+    save_files_to_json_tool = FunctionTool(
+        func=save_files_to_json,
+        description="Traverses all directories and files starting from the given directory and saves the list of file paths to a JSON file.",
+        name="save_files_to_json",
+        global_imports=["os", "json"]
+    )
+
     file_agent = AssistantAgent(
         name="file_agent",
         model_client=model_client,
-        tools=[save_files_to_json],  # Add the tool to the agent's list of tools
+        tools=[save_files_to_json_tool],  # Add the tool to the agent's list of tools
         handoffs=["display_agent"],  # No handoffs for this agent
         system_message=f"""Please scan the current folder and create a list of all files available. Save this list of files to a JSON file named file_list.json. 
         If there are any errors encountered while processing the files, log those errors along with the file names in a separate JSON file named failed_files.json."""
     )
 
+    parse_and_display_json_tool = FunctionTool(
+        func=save_files_to_json,
+        description="Traverses all directories and files starting from the given directory and saves the list of file paths to a JSON file.",
+        name="parse_and_display_json",
+        global_imports=["os", "json"]
+    )
+
     display_agent = AssistantAgent(
         name="display_agent",
         model_client=model_client,
-        tools=[parse_and_display_json],  # Add the tool to the agent's list of tools
+        tools=[parse_and_display_json_tool],  # Add the tool to the agent's list of tools
         handoffs=["success_agent"],  # No handoffs for this agent
         system_message=f"""Please scan the current folder and diplay the contents of file_list.json."""
     )
@@ -229,13 +232,21 @@ if __name__ == "__main__":
     text_mention_termination = TextMentionTermination("TERMINATE")
     max_messages_termination = MaxMessageTermination(max_messages=25)
     termination = text_mention_termination | max_messages_termination
-    team = MagenticOneGroupChat([file_agent, file_surfer, success_agent], 
-                                termination_condition=termination, 
-                                max_turns=2,
-                                model_client=model_client)
+    # team = MagenticOneGroupChat([file_agent, file_surfer, success_agent], 
+    #                             termination_condition=termination, 
+    #                             max_turns=2,
+    #                             model_client=model_client)
     # team = RoundRobinGroupChat([file_agent, display_agent, success_agent], 
     #                             termination_condition=termination, 
     #                             max_turns=1)
+    # team = MagenticOneGroupChat([file_agent, success_agent], 
+    #                             termination_condition=termination, 
+    #                             max_turns=1,
+    #                             model_client=model_client)
+    team = MagenticOneGroupChat([file_surfer], 
+                                termination_condition=termination, 
+                                max_turns=1,
+                                model_client=model_client)
     #query = f"Read and extract text from this file: DeepSeekR1-2501.12948v1.pdf"
     query = f"Can you loop files in current folder ./data and save the list of files in a JSON file?"
     # Extract the generated code
@@ -297,6 +308,8 @@ if __name__ == "__main__":
 
     #print('Response: \n' , response)
     #parse_agent_response(response)
-    # print("-----------------------------------------------------------------------------------------")
+    print("-----------------------------------------------------------------------------------------")
     #print('Agent JSON:', team.dump_component().model_dump_json())
-    # print("-----------------------------------------------------------------------------------------")
+    serialized = team.dump_component().model_dump(mode='python')
+    print(f"Serialized team: {json.dumps(serialized)}")
+    print("-----------------------------------------------------------------------------------------")
