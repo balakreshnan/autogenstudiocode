@@ -1,2 +1,7 @@
 autogenstudio
 PyPDF2
+autogen-core
+autogen-agentchat
+autogen-ext[openai]
+autogen-ext[magentic-one,openai]
+autogen-ext
