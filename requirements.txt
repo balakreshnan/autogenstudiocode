@@ -5,3 +5,6 @@ autogen-agentchat
 autogen-ext[openai]
 autogen-ext[magentic-one,openai]
 autogen-ext
+azure-ai-projects
+azure-monitor-opentelemetry
+opentelemetry-instrumentation-openai-v2
