@@ -258,8 +258,8 @@ def build_agent():
 
     #print('Response: \n' , response)
     #parse_agent_response(response)
-    print("-----------------------------------------------------------------------------------------")
-    print('Agent JSON:', team.dump_component().model_dump_json())
+    #print("-----------------------------------------------------------------------------------------")
+    # print('Agent JSON:', team.dump_component().model_dump_json())
     #serialized = team.dump_component().model_dump(mode='python')
     #print(f"Serialized team: {json.dumps(serialized)}")
     #print("-----------------------------------------------------------------------------------------")
