@@ -73,7 +73,7 @@ def read_code_in_folder(folder_path: str) -> str:
     return java_files
 
 def write_to_file(file_list, output_filename):
-    with open(output_filename, 'w') as f:
+    with open(output_filename, 'w+') as f:
         for file_path in file_list:
             f.write(f"{file_path}\n")
 
