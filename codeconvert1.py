@@ -132,7 +132,7 @@ def convert_code_in_folder(folder_path: str) -> str:
                 #now convert the java code to python code
                 python_code = convertcodellm(java_contents)
                 #write the python code to file
-                with open('./dcode/' + file.replace(".java","") + '.py', 'w') as f:
+                with open('./dcode/' + file.replace(".java","") + '.py', 'w+') as f:
                     f.write(extract_python_code(python_code))
 
     return java_contents
