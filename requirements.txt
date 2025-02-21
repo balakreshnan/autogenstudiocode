@@ -8,3 +8,4 @@ autogen-ext
 azure-ai-projects
 azure-monitor-opentelemetry
 opentelemetry-instrumentation-openai-v2
+streamlit

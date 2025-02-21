@@ -1,6 +1,8 @@
 import asyncio
 import os
+import re
 from PyPDF2 import PdfReader
+from openai import AzureOpenAI
 from autogen_agentchat.agents import AssistantAgent, UserProxyAgent
 from autogen_agentchat.conditions import MaxMessageTermination, TextMentionTermination
 from autogen_core.tools import Tool, FunctionTool
@@ -8,9 +10,12 @@ from autogen_core.code_executor import FunctionWithRequirements, with_requiremen
 from autogen_ext.models.openai import OpenAIChatCompletionClient
 from autogen_ext.models.openai import AzureOpenAIChatCompletionClient
 from autogen_agentchat.teams import RoundRobinGroupChat, MagenticOneGroupChat
+from autogen_ext.agents.magentic_one import MagenticOneCoderAgent
 from typing_extensions import Annotated
 from autogen_ext.agents.file_surfer import FileSurfer
 from textwrap import dedent, indent
+from autogen_ext.teams.magentic_one import MagenticOne
+from autogen_agentchat.ui import Console
 from typing import Any, Callable, Generic, List, Sequence, Set, Tuple, TypeVar, Union
 import json
 import functools
@@ -29,7 +34,13 @@ model_client = AzureOpenAIChatCompletionClient(model="gpt-4o",
                                                seed=42,
                                                maz_tokens=4096)
 
+client = AzureOpenAI(
+  azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT"), 
+  api_key=os.getenv("AZURE_OPENAI_API_KEY"),  
+  api_version="2024-10-21",
+)
 
+model_name = os.getenv("AZURE_OPENAI_DEPLOYMENT")
 
 @with_requirements(global_imports=["from PyPDF2 import PdfReader", "import os", "import json"], python_packages=["PyPDF2"])
 def read_pdfs_in_folder(folder_path: str) -> str:
@@ -66,22 +77,42 @@ def write_to_file(file_list, output_filename):
         for file_path in file_list:
             f.write(f"{file_path}\n")
 
-# @with_requirements(global_imports=["from PyPDF2 import PdfReader", "import os", "import json"], python_packages=["PyPDF2"])
-# def read_code_in_folder(folder_path: str) -> str:
-#     code_contents = {}
+def convertcodellm(contents: str) -> str:
+    returntxt = ""
 
-#     for root, dirs, files in os.walk(folder_path):
-#         for file in files:
-#             if file.lower().endswith('.java'):
-#                 file_path = os.path.join(root, file)
-#                 try:
-#                     with open(file_path, 'r') as f:
-#                         code = f.read()
-#                     code_contents[file] = code
-#                 except Exception as e:
-#                     print(f"Error reading {file}: {str(e)}")
+    rfttext = ""
 
-#     return code_contents
+
+    message_text = [
+    {"role":"system", "content":f"""You are AI Codine Expert. Convert Java code to Python code using LLM model. 
+     Here is the code to convert Java code to Python code using LLM model:
+     {contents}
+
+    ."""}, 
+    {"role": "user", "content": f""" Based on the code provided please convert to python code."""}]
+
+    response = client.chat.completions.create(
+        model=os.getenv("AZURE_OPENAI_DEPLOYMENT"), #"gpt-4-turbo", # model = "deployment_name".
+        messages=message_text,
+        temperature=0.0,
+        top_p=0.0,
+        seed=42,
+        max_tokens=1000,
+    )
+
+    returntxt = response.choices[0].message.content
+    return returntxt
+
+def extract_python_code(text):  
+    # Use regular expressions to find the Python code block  
+    match = re.search(r'```python(.*?)```', text, re.DOTALL)  
+    if match:  
+        # Extract and clean the code  
+        code = match.group(1).strip()  
+        # Fix any formatting issues, like missing newlines  
+        code = code.replace('def home():', 'def home():\n').replace("')", "')\n")  
+        return code  
+    return None 
 
 @with_requirements(global_imports=["from PyPDF2 import PdfReader", "import os", "import json"], python_packages=["PyPDF2"])
 def convert_code_in_folder(folder_path: str) -> str:
@@ -98,87 +129,15 @@ def convert_code_in_folder(folder_path: str) -> str:
                     java_contents += f.read()
                     java_contents += "\n\n"  # Add some separation between files
 
-    # Optionally, write the list of files to filetoprocess.txt
-    # write_to_file(java_files, 'filetoprocess.txt')
-    
+                #now convert the java code to python code
+                python_code = convertcodellm(java_contents)
+                #write the python code to file
+                with open('./dcode/' + file.replace(".java","") + '.py', 'w') as f:
+                    f.write(extract_python_code(python_code))
+
     return java_contents
 
-def write_to_file(file_list, output_filename):
-    with open(output_filename, 'w') as f:
-        for file_path in file_list:
-            f.write(f"{file_path}\n")
-
-def build_agent():
-    # Example usage of the tool directly
-    code_reader_tool = FunctionTool(
-        func=read_code_in_folder,
-        description="Loop through the folder and take .java file and create a list of java files to process. Provide the full directory path as input.",
-        name="file_reader",
-        global_imports=["os", "json", ImportFromModule("PyPDF2", ("PdfReader",)),]
-    )
-
-    # Step 2: Define an Agent and Add the Tool
-    agent = AssistantAgent(
-        name="assistant_with_java_reader",
-        model_client=model_client,
-        tools=[code_reader_tool],  # Add the tool to the agent's list of tools
-        handoffs=["convert_agent"],  # No handoffs for this agent
-    )
-
-    convert_reader_tool = FunctionTool(
-        func=convert_code_in_folder,
-        description="Loop through the folder and take .java file, Read the content and convert java code to python code using model memory and save to ./dcode folder.",
-        name="convert_reader",
-        global_imports=["os", "json", ImportFromModule("PyPDF2", ("PdfReader",)),]
-    )
-
-    
-    # Step 3: Define an Agent and Add the Tool
-    convert_agent = AssistantAgent(
-        name="convert_agent",
-        model_client=model_client,
-        tools=[convert_reader_tool],  # Add the tool to the agent's list of tools
-        handoffs=["write_agent"],  # No handoffs for this agent
-    )
-
-    code_write_tool = FunctionTool(
-        func=convert_code_in_folder,
-        description="Given the java file please cnvert to python please save them to ./dcode folder.",
-        name="code_write",
-        #global_imports=["os", "json", ImportFromModule("PyPDF2", ("PdfReader",)),]
-    )
-    # Step 4: Define an Agent and Add the Tool
-    code_write_agent = AssistantAgent(
-        name="write_agent",
-        model_client=model_client,
-        tools=[code_write_tool],  # Add the tool to the agent's list of tools
-        handoffs=[],  # No handoffs for this agent
-        system_message="You are java to python conversion agent. Please convert the java code to python and save to ./dcode folder."
-    )
-
-    text_mention_termination = TextMentionTermination("TERMINATE")
-    max_messages_termination = MaxMessageTermination(max_messages=25)
-    termination = text_mention_termination | max_messages_termination
-
-    team = MagenticOneGroupChat([agent, convert_agent, code_write_agent], 
-                                termination_condition=termination, 
-                                max_turns=1,
-                                model_client=model_client)
-
-    query = f"Can you loop files in current folder ./scode and convert to python and store to ./dcode folder?"
-    # summarize ./papers
-    # Extract the generated code
-    response = asyncio.run(team.run(task=query))
-    last_message = response.messages
-    print("-----------------------------------------------------------------------------------------")
-
-    for message in response.messages:
-        print("-----------------------------------------------------------------------------------------")
-        print('Messages: ' , message)
-        print('Messages Source: ' , message.source)
-        print('Messages Content: ' , message.content)
-        print("-----------------------------------------------------------------------------------------")
-
+def printmetrics(response):
     print("-----------------------------------------------------------------------------------------")
     print("Now it's time to print the token usage metrics for the agents.")
     print("-----------------------------------------------------------------------------------------")
@@ -220,15 +179,93 @@ def build_agent():
     print(f"Total Token Usage: {total_prompt_tokens + total_completion_tokens}")
     print("-----------------------------------------------------------------------------------------")
 
+def write_to_file(file_list, output_filename):
+    with open(output_filename, 'w') as f:
+        for file_path in file_list:
+            f.write(f"{file_path}\n")
+
+def build_agent():
+    # Example usage of the tool directly
+    code_reader_tool = FunctionTool(
+        func=read_code_in_folder,
+        description="Loop through the folder and take .java file and create a list of java files to process. Provide the full directory path as input.",
+        name="file_reader",
+        global_imports=["os", "json", ImportFromModule("PyPDF2", ("PdfReader",)),]
+    )
+
+    # Step 2: Define an Agent and Add the Tool
+    agent = AssistantAgent(
+        name="Java_file_reader",
+        model_client=model_client,
+        tools=[code_reader_tool],  # Add the tool to the agent's list of tools
+        handoffs=["convert_agent"],  # No handoffs for this agent
+        description="Read the content of Java files in the folder and create a list of files to process."
+    )
+
+    convert_reader_tool = FunctionTool(
+        func=convert_code_in_folder,
+        description="Read the content and convert java code to python code using model memory and save to ./dcode folder.",
+        name="convert_reader",
+        global_imports=["os", "json", ImportFromModule("PyPDF2", ("PdfReader",)),]
+    )
+
+    # Step 3: Define an Agent and Add the Tool
+    convert_agent = AssistantAgent(
+        name="convert_agent",
+        model_client=model_client,
+        tools=[convert_reader_tool],  # Add the tool to the agent's list of tools
+        #handoffs=["code_write_agent"],  # No handoffs for this agent
+        description="Convert Java code to Python code using model memory and save to ./dcode folder using tool provided."
+    )
+
+    text_mention_termination = TextMentionTermination("TERMINATE")
+    max_messages_termination = MaxMessageTermination(max_messages=25)
+    termination = text_mention_termination | max_messages_termination
+
+    # m1coder = MagenticOneCoderAgent(model_client=model_client, name="CodeCreator")
+
+    #m1 = MagenticOne(client=model_client)
+
+    team = MagenticOneGroupChat([agent, convert_agent], 
+                                termination_condition=termination, 
+                                max_turns=1,
+                                model_client=model_client)
+    # team = RoundRobinGroupChat([agent, code_write_agent], 
+    #                             termination_condition=termination, 
+    #                             max_turns=1)
+
+    
+    #task = "convert Java code to Python script and store in ./dcode folder"
+    #result = asyncio.run(m1.run(task=task))
+    #print(result)
+
+    query = f"Can you loop files in current folder ./scode and convert to python and store to ./dcode folder?"
+    # summarize ./papers
+    # Extract the generated code
+    response = asyncio.run(team.run(task=query))
+    #response = asyncio.run(team.run_stream(task=query))
+    # last_message = response.messages
+    print("-----------------------------------------------------------------------------------------")
+
+    for message in response.messages:
+        print("-----------------------------------------------------------------------------------------")
+        print('Messages: ' , message)
+        print('Messages Source: ' , message.source)
+        print('Messages Content: ' , message.content)
+        print("-----------------------------------------------------------------------------------------")
+
+    # printmetrics(response)
+
     #print('Response: \n' , response)
     #parse_agent_response(response)
     print("-----------------------------------------------------------------------------------------")
-    #print('Agent JSON:', team.dump_component().model_dump_json())
+    print('Agent JSON:', team.dump_component().model_dump_json())
     #serialized = team.dump_component().model_dump(mode='python')
     #print(f"Serialized team: {json.dumps(serialized)}")
-    print("-----------------------------------------------------------------------------------------")
-    print(convert_reader_tool.dump_component().model_dump_json())
-    print("-----------------------------------------------------------------------------------------")
+    #print("-----------------------------------------------------------------------------------------")
+    #print(convert_reader_tool.dump_component().model_dump_json())
+    #print("-----------------------------------------------------------------------------------------")
+    
 
 # Step 4: Test the Agent with the Tool
 if __name__ == "__main__":
