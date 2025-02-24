@@ -2,6 +2,7 @@ import asyncio
 import os
 from PyPDF2 import PdfReader
 import PyPDF2
+from openai import AzureOpenAI
 from autogen_agentchat.agents import AssistantAgent, UserProxyAgent
 from autogen_agentchat.conditions import MaxMessageTermination, TextMentionTermination
 from autogen_core import CancellationToken
@@ -39,7 +40,7 @@ model_client = AzureOpenAIChatCompletionClient(model="o1-mini",
                                                azure_deployment="o1-mini", 
                                                azure_endpoint=os.getenv("AZURE_OPENAI_O1_ENDPOINT"), 
                                                api_key=os.getenv("AZURE_OPENAI_O1_KEY"), 
-                                               #api_version="2025-01-01-preview",
+                                               # api_version="2025-01-31",
                                                )
 
 temp_path = "temp1.pdf"
@@ -182,22 +183,97 @@ def process_agent(prompt):
     text_mention_termination = TextMentionTermination("TERMINATE")
     max_messages_termination = MaxMessageTermination(max_messages=25)
     termination = text_mention_termination | max_messages_termination
+    
+    newprompt = f"""You are AIOPS AI agent. Your job is to create much accurate ISO SQL to retrieve data.
+            Here is the Schema of the AIOPS database. Your job is to create much accurate ISO SQL to retrieve data.
+            Schema:
+            CREATE TABLE Assets (
+                asset_id INT PRIMARY KEY AUTO_INCREMENT,
+                asset_name VARCHAR(255) NOT NULL,
+                asset_type VARCHAR(50),  -- e.g., Server, Database, Application
+                ip_address VARCHAR(45),
+                location VARCHAR(255),
+                status ENUM('Active', 'Inactive', 'Decommissioned'),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
 
-    messages = [
-        {
-            "role": "user", 
-            "content": f"""{prompt}"""
-        }
-     ]
+            CREATE TABLE Metrics (
+                metric_id INT PRIMARY KEY AUTO_INCREMENT,
+                asset_id INT,
+                metric_name VARCHAR(100),  -- e.g., CPU Usage, Memory Usage
+                metric_value FLOAT,
+                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (asset_id) REFERENCES Assets(asset_id)
+            );
 
-    response = asyncio.run(agent.on_messages([TextMessage(content=prompt, source="user")], CancellationToken()))
+            CREATE TABLE Logs (
+                log_id INT PRIMARY KEY AUTO_INCREMENT,
+                asset_id INT,
+                log_level ENUM('INFO', 'WARNING', 'ERROR', 'CRITICAL'),
+                log_message TEXT,
+                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (asset_id) REFERENCES Assets(asset_id)
+            );
+
+            CREATE TABLE Anomalies (
+                anomaly_id INT PRIMARY KEY AUTO_INCREMENT,
+                asset_id INT,
+                anomaly_type VARCHAR(100),
+                anomaly_description TEXT,
+                detected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (asset_id) REFERENCES Assets(asset_id)
+            );
+
+            CREATE TABLE Incidents (
+                incident_id INT PRIMARY KEY AUTO_INCREMENT,
+                anomaly_id INT,
+                incident_status ENUM('Open', 'In Progress', 'Resolved', 'Closed'),
+                priority ENUM('Low', 'Medium', 'High', 'Critical'),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                resolved_at TIMESTAMP NULL,
+                FOREIGN KEY (anomaly_id) REFERENCES Anomalies(anomaly_id)
+            );
+
+            CREATE TABLE Alerts (
+                alert_id INT PRIMARY KEY AUTO_INCREMENT,
+                incident_id INT,
+                alert_message TEXT,
+                alert_status ENUM('Triggered', 'Acknowledged', 'Resolved'),
+                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (incident_id) REFERENCES Incidents(incident_id)
+            );
+
+            CREATE TABLE Recommendations (
+                recommendation_id INT PRIMARY KEY AUTO_INCREMENT,
+                incident_id INT,
+                suggested_action TEXT,
+                confidence_score FLOAT,  -- AI confidence level in resolution
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (incident_id) REFERENCES Incidents(incident_id)
+            );
+
+            CREATE TABLE Users (
+                user_id INT PRIMARY KEY AUTO_INCREMENT,
+                username VARCHAR(255) UNIQUE NOT NULL,
+                email VARCHAR(255) UNIQUE NOT NULL,
+                role ENUM('Admin', 'Operator', 'Viewer'),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+            Only create SQL statements. Do not hallucinate or make up data.
+          
+            Here is the query to convert to SQL Statement:
+            {prompt}
+
+            Respond only with SQL Statement.
+            """
+    print('New Prompt:', newprompt)
+
+    # response = asyncio.run(agent.on_messages([TextMessage(content=prompt, source="user")], CancellationToken()))
+    response = asyncio.run(agent.on_messages([TextMessage(content=newprompt, source="user")], CancellationToken()))
     #print(response)
     print(response.chat_message.content) 
 
     # query = f"Can you loop files in current folder ./scode and convert to python and store to ./dcode folder?"
-    # summarize ./papers
-    # Extract the generated code
-    #response = asyncio.run(team.run(task=query))
     last_message = response.chat_message.content
 
     returntxt = last_message
