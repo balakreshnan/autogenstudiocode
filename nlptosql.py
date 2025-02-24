@@ -26,14 +26,13 @@ load_dotenv()
 
 source_file_path = "./scode/"
 
-# model_client = AzureOpenAIChatCompletionClient(model="gpt-4o",
-#                                                azure_deployment="gpt-4o-2", 
-#                                                azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"), 
-#                                                api_key=os.getenv("AZURE_OPENAI_API_KEY"), 
-#                                                api_version="2024-10-21",
-#                                                temperature=0.0,
-#                                                seed=42,
-#                                                maz_tokens=4096)
+client = AzureOpenAI(
+  azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT"), 
+  api_key=os.getenv("AZURE_OPENAI_API_KEY"),  
+  api_version="2024-10-21",
+)
+
+model_name = os.getenv("AZURE_OPENAI_DEPLOYMENT")
 
 # https://agentaihubeast5815899485.openai.azure.com/openai/deployments/o1-mini/chat/completions?api-version=2025-01-01-preview
 model_client = AzureOpenAIChatCompletionClient(model="o1-mini",
