@@ -34,6 +34,7 @@ async def main() -> None:
     # )
     # team = MagenticOneGroupChat([assistant], model_client=model_client)
     # await Console(team.run_stream(task="Provide a different proof for Fermat's Last Theorem"))
+    # https://microsoft.github.io/autogen/stable/reference/python/autogen_ext.agents.web_surfer.html#autogen_ext.agents.web_surfer.MultimodalWebSurfer
 
     surfer = MultimodalWebSurfer(
         "MultimodalWebSurfer",
