@@ -34,8 +34,8 @@ def send_email(to_email: str, subject: str, body: str) -> str:
     # Email configuration (replace with your SMTP server details)
     smtp_server = "smtp.gmail.com"
     smtp_port = 587
-    sender_email = "test@gmail.com"
-    sender_password = "test1234"
+    sender_email = os.getenv("GOOGLE_EMAIL")
+    sender_password = os.getenv("GOOGLE_APP_PASSWORD")
 
     # Create the email message
     message = MIMEMultipart()
@@ -45,10 +45,10 @@ def send_email(to_email: str, subject: str, body: str) -> str:
     message.attach(MIMEText(body, "plain"))
 
     # Send the email
-    # with smtplib.SMTP(smtp_server, smtp_port) as server:
-    #     server.starttls()
-    #     server.login(sender_email, sender_password)
-    #     server.send_message(message)
+    with smtplib.SMTP(smtp_server, smtp_port) as server:
+        server.starttls()
+        server.login(sender_email, sender_password)
+        server.send_message(message)
     
     return f"Email sent to {to_email} with subject: {subject}"
 
@@ -106,7 +106,8 @@ async def main() -> None:
     # await Console(team.run_stream(task="Summarize latest news from venture beat all things in AI."))
     # await Console(team.run_stream(task="Summarize latest news from Techmeme."))
     # await Console(team.run_stream(task="Access Wisconsin DMV web site and download Motorists driver license handbook as pdf."))
-    await Console(team.run_stream(task="Summarize latest updates from Accenture newsroowm and email babal@microsoft.com with subject Accenture news."))
+    # await Console(team.run_stream(task="Summarize latest updates from Accenture newsroowm and email babal@microsoft.com with subject Accenture news."))
+    await Console(team.run_stream(task="Summarize Top 10 latest updates from techmeme and email babal@microsoft.com."))
     await surfer.close()
 
 
