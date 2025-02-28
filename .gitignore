@@ -7,3 +7,4 @@ coding/
 output/
 stocks.csv
 .cache/
+nlptosqlacc.py

@@ -107,7 +107,9 @@ async def main() -> None:
     # await Console(team.run_stream(task="Summarize latest news from Techmeme."))
     # await Console(team.run_stream(task="Access Wisconsin DMV web site and download Motorists driver license handbook as pdf."))
     # await Console(team.run_stream(task="Summarize latest updates from Accenture newsroowm and email babal@microsoft.com with subject Accenture news."))
-    await Console(team.run_stream(task="Summarize Top 10 latest updates from techmeme and email babal@microsoft.com."))
+    # await Console(team.run_stream(task="Summarize Top 10 latest updates from techmeme and email babal@microsoft.com."))
+    # await Console(team.run_stream(task="Can you look for new Deep Seek Code released and summarize."))
+    await Console(team.run_stream(task="Sumamrize top 10 latest stock trends and summarize."))
     await surfer.close()
 
 
