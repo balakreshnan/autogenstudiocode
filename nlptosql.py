@@ -284,6 +284,19 @@ def processnlp():
     count = 0
     temp_file_path = ""
     rfttopics = ""
+    # Define the questions  
+    questions = [  
+        "How many applications are onboarded on the lake?",  
+        "Which are the biggest datasets?",  
+        "Which application they belong to?",  
+        "What is the average size of the datasets?",  
+        "Which tables greater than 10GB are not partitioned?",  
+        "For application XXXX do I need to improvement steps?",  
+        "Were there any job failed for in last 24 hours?",  
+        "Which application is having highest failures?",  
+        "Share the key causes for the failures",  
+        "What is the billed costs for AIR XXXX for BQ?"  
+    ] 
 
     #tab1, tab2, tab3, tab4 = st.tabs('RFP PDF', 'RFP Research', 'Draft', 'Create Word')
     modeloptions1 = ["o1-mini", "gpt-4o-2", "gpt-4o-g", "gpt-4o"]
@@ -296,6 +309,17 @@ def processnlp():
     uploaded_file = st.file_uploader("Upload a PDF file", type=["pdf"])
     # user_input = st.text_input("Enter the question to ask the AI model", "what are the personal protection i should consider in manufacturing?")
     # what are the precaution to take when handling chemicals for eyes and hands?
+    # Create a dropdown menu  
+    selected_question = st.selectbox("Select a question:", questions) 
+    # Display the selected question in chat input  
+    if 'chat_input' not in st.session_state:  
+        st.session_state['chat_input'] = ""  
+    
+    if selected_question:  
+        st.session_state['chat_input'] = selected_question  
+    
+    # Set up chat input with the selected question  
+    # prompt = st.chat_input("How many users used the application1 yesterday?", key='chat_input')  
     if prompt := st.chat_input("How many users used the application1 yesterday?", key="chat1"):
         # Call the extractproductinfo function
         #st.write("Searching for the query: ", prompt)
