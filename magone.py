@@ -21,7 +21,7 @@ if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
 
 model_client = AzureOpenAIChatCompletionClient(model="gpt-4o",
-                                               azure_deployment="gpt-4o-2", 
+                                               azure_deployment="gpt-4o", 
                                                azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"), 
                                                api_key=os.getenv("AZURE_OPENAI_API_KEY"), 
                                                api_version="2024-10-21",

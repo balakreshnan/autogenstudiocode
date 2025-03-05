@@ -10,3 +10,4 @@ azure-monitor-opentelemetry
 opentelemetry-instrumentation-openai-v2
 streamlit
 autogen-ext[web-surfer]
+autogen-ext[video-surfer]
