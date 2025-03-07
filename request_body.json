@@ -4,12 +4,9 @@
     "fieldSchema": {
       "fields": {
         "Title": {
-          "type": "string"
-        },
-        "ChartType": {
           "type": "string",
-          "method": "classify",
-          "enum": [ "bar", "line", "pie" ]
+          "kind" : "generate",
+          "description": "Summarize the video"
         }
       }
     }
