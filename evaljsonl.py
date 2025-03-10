@@ -1,7 +1,7 @@
 import json
 
 # Path to your .jsonl file
-file_path = "unittestdata01-2.JSONL"
+file_path = "unittestdata01-2-1.JSONL"
 
 # Path to save the JSONL file
 output_file = "output1.jsonl"
@@ -18,7 +18,7 @@ with open(file_path, 'r') as file:
             file.write(json_line + '\n')  # Write JSON string followed by a newline character
         
         # Evaluate or process the JSON object
-        print(json_obj)  # Replace with your evaluation logic
+        # print(json_obj)  # Replace with your evaluation logic
 
 
 
