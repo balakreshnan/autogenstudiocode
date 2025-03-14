@@ -1,10 +1,10 @@
 import json
 
 # Path to your .jsonl file
-file_path = "unittestdata01-2-1.JSONL"
+file_path = "unittestdata01-2-2.JSONL"
 
 # Path to save the JSONL file
-output_file = "output1.jsonl"
+output_file = "output2.jsonl"
 
 # Open and read the .jsonl file
 with open(file_path, 'r') as file:
